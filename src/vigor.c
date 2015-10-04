@@ -1,5 +1,7 @@
 #include <pebble.h>
 
+#define VIGOR_TIME 34
+
 //Here be the variables.
 Window *window;
 Layer *bg_layer;
@@ -26,8 +28,10 @@ static void bg_layer_update_callback(Layer *layer, GContext* ctx) {
 	graphics_fill_rect(ctx, layer_get_bounds(layer), 0, GCornerNone);
 }
 
-static void handle_accl() {
-	text_layer_set_text(text_accl_layer, "No accl data");
+static void accl_handlr(uint16_t type, AppWorkerMessage* data) {
+	static char buff[40];
+	snprintf(buff, sizeof(buff), "t=%d, x=%d", (*data).data0, (int) ((*data).data1));
+	text_layer_set_text(text_accl_layer, buff);
 }
 
 static void hr_layer_update_callback(Layer *layer, GContext* ctx) {
@@ -70,8 +74,6 @@ static void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
 	text_layer_set_text(text_time_layer, time_text);
 
 	handle_battery(battery_state_service_peek());
-
-	handle_accl();
 }
 
 // Kill teh shiz
@@ -135,6 +137,10 @@ static void handle_init(void) {
 	//hr_init
 	hr_layer = layer_create(GRect(21, 94, 104, 2));
 	layer_set_update_proc(hr_layer, hr_layer_update_callback);
+
+	if (!app_worker_is_running())
+		app_worker_launch();
+	app_worker_message_subscribe(&accl_handlr);
 
 	// Draw teh stuffz
 	layer_add_child(window_layer, bg_layer);
